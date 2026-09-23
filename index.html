@@ -26,6 +26,10 @@
   #brandName span{color:var(--accent);}
   header h1{font-size:10.5px; font-weight:600; color:var(--muted); white-space:nowrap; margin:0;}
   header h1 span{color:var(--accent);}
+  #brand{display:flex; flex-direction:column; align-items:flex-start; gap:2px;}
+  #btnLang{margin-top:3px; padding:3px 9px; font-size:11px; font-weight:700; cursor:pointer;
+    border:1.5px solid var(--accent); background:var(--panel); color:var(--accent); border-radius:999px; white-space:nowrap;}
+  #btnLang:hover{background:var(--accent); color:#fff;}
   .btn{
     border:1px solid var(--border); background:var(--panel); color:var(--text);
     padding:5px 10px; border-radius:7px; font-size:12.5px; cursor:pointer;
@@ -385,6 +389,7 @@
   <div id="brand">
     <div id="brandName">BOUNDY <span>Chem</span></div>
     <h1>화학 구조식 <span>에디터</span></h1>
+    <button id="btnLang" title="언어 선택 / Choose language">🌐 언어 / LANGUAGE</button>
   </div>
   <button class="btn" id="btnOpen">열기 (JSON)</button>
   <button class="btn" id="btnSaveMenu" style="font-weight:700">저장</button>
@@ -411,10 +416,26 @@
   <button class="btn" id="btnSettings">AI설정</button>
   <button class="btn" id="btnHist">개발이력</button>
   <button class="btn" id="btnExt" style="font-weight:700">확장기능</button>
-  <button class="btn" id="btnLang" title="한국어 / English 전환">한/영</button>
   <input type="file" id="imgInput" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none">
   <input type="file" id="fileInput" accept=".json,application/json">
 </header>
+
+<div id="langPop" style="display:none;position:fixed;inset:0;z-index:2147483100;background:rgba(15,23,42,.94);align-items:center;justify-content:center;font-family:'Segoe UI','Malgun Gothic',sans-serif;">
+  <div style="background:#fff;max-width:420px;width:90%;border-radius:16px;padding:28px 24px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.5);">
+    <div style="font-size:26px;font-weight:800;color:#1c2733;">BOUNDY <span style="color:#2563eb;">Chem</span></div>
+    <div style="margin-top:12px;font-size:15px;font-weight:700;color:#1c2733;">언어 선택 · Choose language</div>
+    <div id="langPopList" style="margin-top:18px;display:flex;flex-direction:column;gap:10px;"></div>
+    <button id="langPopClose" style="margin-top:16px;background:none;border:none;color:#8a99ab;font-size:13px;cursor:pointer;">닫기 · Close</button>
+  </div>
+</div>
+
+<div id="verPop" style="display:none;position:fixed;inset:0;z-index:2147483100;background:rgba(15,23,42,.94);align-items:center;justify-content:center;font-family:'Segoe UI','Malgun Gothic',sans-serif;">
+  <div style="background:#fff;max-width:430px;width:90%;border-radius:16px;padding:28px 26px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.5);">
+    <div style="font-size:28px;font-weight:800;color:#1c2733;">BOUNDY <span style="color:#2563eb;">Chem</span></div>
+    <div id="verPopBody" style="margin-top:16px;font-size:13.5px;color:#1c2733;line-height:1.95;text-align:left;"></div>
+    <button id="verPopClose" style="margin-top:18px;width:100%;padding:12px;font-size:15px;font-weight:800;background:#2563eb;color:#fff;border:none;border-radius:10px;cursor:pointer;">닫기 · Close</button>
+  </div>
+</div>
 
 <div id="ctxMenu">
   <button id="ctxSelAll">전체 선택</button>
@@ -616,7 +637,7 @@
     </div>
 
     <div class="group">
-      <h2>원소</h2>
+      <h2 style="display:flex; align-items:center; justify-content:space-between; gap:6px;"><span>원소</span><button id="btnBareElem" title="단독 원소 모드 — 켜면 원소 기호를 자동 수소 없이 중성 원자 하나만 찍습니다 (예: H·O·C 단독). H⁺는 이 상태로 H를 찍은 뒤 [+전하]로 만드세요." style="font-size:10px; font-weight:700; padding:2px 7px; border:1.5px solid var(--border); border-radius:6px; background:var(--panel); color:var(--muted); cursor:pointer; white-space:nowrap;">단독 원소</button></h2>
       <div class="elems" id="elemGrid">
         <button class="elem" data-el="C">C</button>
         <button class="elem" data-el="N">N</button>
@@ -650,7 +671,7 @@
     </div>
 
     <div id="credits">
-      V1.92 (2026.9)<br>
+      V1.95 (2026.9)<br>
       개발자: 정윤성<br>
       한국공학대학교<br>
       생명화학공학과
@@ -898,6 +919,16 @@
           최신 버전이 위에 있습니다 · BOUNDY Chem — 개발: 정윤성 (한국공학대학교 생명화학공학과)
         </div>
         <table class="hTable">
+          <tr><td>V1.95<br>(2026.9)</td><td>
+            · <b>[단독 원소] 단추</b> — 왼쪽 '원소' 옆 [단독 원소]를 켜면 H·O·C 등을 자동 수소 없이 중성 원자 하나만 그릴 수 있습니다 (H⁺는 이 상태로 H를 찍은 뒤 [+전하])<br>
+            · <b>로고 클릭 → 버전·라이선스 안내</b> — 상단 [BOUNDY Chem] 로고를 누르면 현재 버전(무료·유료 한글·유료 International)과 라이선스 기간·키·만료일이 뜨고, [라이선스 해제]로 키를 지우거나 바꿀 수 있습니다</td></tr>
+          <tr><td>V1.94<br>(2026.9)</td><td>
+            · <b>정식판(유료 라이선스)</b> — 홈페이지에서 정식판(1개월·6개월·1년)을 구매하면 국가별 인증 키가 이메일로 발급됩니다<br>
+            · <b>[언어/LANGUAGE] 단추</b> — 로고 아래로 이동, 클릭 시 전체화면 언어 선택 팝업<br>
+            · <b>하단 라이선스 표시</b> — 화면 하단에 인증 키·이용기간이 안내와 번갈아 표시</td></tr>
+          <tr><td>V1.93<br>(2026.9)</td><td>
+            · <b>[한/영] 언어 전환</b> — 상단 [한/영] 단추로 앱 전체(가이드·개발이력·3D·스펙트럼·정보)를 영어↔한국어 즉시 전환<br>
+            · <b>라이선스 인증</b> — 한국공학대학교 구성원은 학교 이메일 인증으로 무료 키를 받아 설치판을 사용합니다 (6개월마다 재인증)</td></tr>
           <tr><td>V1.92<br>(2026.9)</td><td>
             · <b>[SMILES그리기] 단추</b>([SMILES 복사] 오른쪽) — SMILES 문자열을 팝업에 붙여넣으면 <b>구조를 자동 생성</b>. 방향족 소문자(케쿨화 자동), 가지·고리·<b>융합 고리</b>(나프탈렌·카페인 등)까지 교과서 배열로 배치<br>
             · <b>[이름으로 그리기] 단추</b>([IUPAC 이름] 오른쪽) — IUPAC 이름·관용명(<b>한글·영문</b>)을 입력하면 구조 자동 생성. 내장 사전(약 70종)+체계명 규칙(사슬·가지·알켄/알카인·알코올/알데하이드/케톤/카복실산/아민/나이트릴·다이올·할로젠·사이클로·벤젠 유도체)으로 해석하며, 못 읽는 이름은 <b>[AI설정] 키가 있을 때 AI로 검색</b>(참고용)</td></tr>
@@ -991,6 +1022,8 @@
 
         <h3>① 상단 메뉴</h3>
         <table class="hTable">
+          <tr><td>BOUNDY Chem 로고</td><td>좌측 상단 로고를 클릭하면 현재 버전(무료판·유료 한글·유료 International·웹 체험판)과 라이선스 기간·인증 키·만료일이 팝업으로 표시됩니다. 설치판에서는 팝업 안의 [라이선스 해제·변경]으로 저장된 키를 지우거나 새 키로 바꿀 수 있습니다(다른 PC로 옮길 때도 사용). 팝업은 [닫기]로만 닫힙니다.</td></tr>
+          <tr><td>언어 / LANGUAGE</td><td>로고 아래 [🌐 언어 / LANGUAGE] 단추를 누르면 언어 선택 팝업이 뜨고, 앱 전체(메뉴·가이드·개발이력·3D·스펙트럼·정보)가 선택한 언어로 즉시 전환됩니다 (현재 한국어·English 지원).</td></tr>
           <tr><td>열기 (JSON)</td><td>저장해 둔 작업 파일(.json)을 불러옵니다.</td></tr>
           <tr><td>저장</td><td>누르면 저장 형식 선택 팝업이 열립니다 — <b>JSON</b>(작업 파일: 구조·텍스트·화살표 전체, [열기]로 복원), <b>MOL</b>(ChemDraw·ChemSketch·MarvinSketch 등 타 프로그램 호환), <b>PNG</b>(흰 배경/배경 투명), <b>JPG</b>(흰 배경), <b>WebP</b>(배경 투명·저용량), <b>SVG</b>(벡터 — <b>Adobe Illustrator</b>·Inkscape 등에서 열어 선·글자를 개별 편집 가능. Illustrator 전용 .ai 형식은 Adobe의 비공개 형식이라 직접 생성할 수 없으며, SVG가 Illustrator 공식 지원 표준 벡터 형식입니다). <b>그림 저장은 선택한 구조가 있으면 그 부분만 저장</b>되고, 선택이 없으면 그려진 전체가 저장됩니다. 작업은 브라우저에도 자동 저장되며, 프로그램은 항상 빈 화면으로 시작하고 이전 작업이 있으면 상단 알림의 <b>이어서 작업</b>으로 복구할 수 있습니다.</td></tr>
           <tr><td>SMILES 복사</td><td>그린 구조를 SMILES 문자열로 변환해 클립보드에 복사합니다.</td></tr>
@@ -1073,6 +1106,7 @@
           <tr><td>라디칼</td><td>원자를 클릭하면 <b>홀전자 점(•)</b>이 찍힙니다 (클릭할 때마다 1개 → 2개 → 제거 순환). 홀전자 수만큼 수소가 자동으로 줄어들어 •CH₃(메틸 라디칼)처럼 표시되고, SMILES([CH3])·MOL(M RAD) 내보내기에도 반영됩니다.</td></tr>
           <tr><td>전자쌍</td><td>원자를 클릭하면 <b>비공유 전자쌍(: 점 2개)</b>이 추가됩니다 (1쌍 → 2쌍 → 3쌍 → 4쌍 → 제거 순환). 결합이 없는 방향부터 위/오른쪽/아래/왼쪽 순서로 배치되어 :Br:⁻처럼 8전자(4쌍)까지 표현할 수 있습니다. 표시용이므로 수소 수·분자식에는 영향이 없습니다.</td></tr>
           <tr><td>원소 버튼</td><td>그릴 원소를 선택합니다. 단축키: <kbd>C</kbd><kbd>N</kbd><kbd>O</kbd><kbd>S</kbd><kbd>P</kbd><kbd>F</kbd>, <kbd>L</kbd>=Cl, <kbd>R</kbd>=Br, <kbd>I</kbd>, <kbd>H</kbd>. <b>R</b> 버튼은 치환기 자리표시자(R기) — 실제 원소는 아니지만 원소처럼 그릴 수 있습니다(수소 자동 부착 없음, 일반식·메커니즘 표기용). <b>···</b> 버튼으로 다른 원소(Si, Na 등) 입력. 수소는 원자가에 맞게 자동 표시됩니다.</td></tr>
+          <tr><td>단독 원소</td><td>'원소' 라벨 옆의 [단독 원소]를 켜면(파란색 활성) 원소를 클릭한 뒤 캔버스를 클릭할 때 자동 수소 없이 중성 원자 하나만 찍힙니다 — H·O·C 등을 단독으로 그릴 때 사용합니다. H⁺(수소 양이온)는 이 모드로 H를 찍은 뒤 [+전하]를 적용하세요. 다시 누르면 꺼져 원래대로 수소가 자동 표시됩니다.</td></tr>
         </table>
 
         <h3>⑦ 글꼴</h3>
@@ -1143,6 +1177,8 @@ const FONT_FAMILIES = {
 const state = {
   tool: "draw",          // select | draw | erase | text | arrow | charge+ | charge- | ring
   element: "C",
+  bareElement: false,    // [단독 원소] 모드 — 켜면 클릭 배치 시 자동 수소 없이 중성 원소 그대로 찍힘
+
   bondOrder: 1,
   bondStereo: 0,
   bGap: 7.2,             // B타입 대칭 이중선 간격 (px, 전역)
@@ -1348,6 +1384,7 @@ function bondOrderSum(a){
   let s=0; for(const b of bondsOf(a)) s+=(b.stereo===7? 1.5 : b.order); return s;
 }
 function implicitH(a){
+  if(a.noH) return 0;   // [단독 원소] 모드로 찍은 중성 원자 — 자동 수소 없음 (H·O·C 단독 표기, H⁺ 등)
   const v = VALENCE[a.el];
   if(v===undefined) return 0;
   // C: 전하 시 결합 자리 감소 / N,P,B,O,S,할로젠: 원자가 + 전하 (예: N+ → 4, O− → 1)
@@ -1619,6 +1656,17 @@ document.querySelectorAll(".tool[data-arrow]").forEach(b=>b.onclick=()=>{
   setActiveButtons(); render();
 });
 document.querySelectorAll(".elem[data-el]").forEach(b=>b.onclick=()=>setElement(b.dataset.el));
+(function(){
+  var bb=document.getElementById("btnBareElem");
+  if(!bb) return;
+  bb.onclick=function(){
+    state.bareElement=!state.bareElement;
+    var on=state.bareElement;
+    bb.style.background = on ? "var(--accent)" : "var(--panel)";
+    bb.style.color      = on ? "#fff" : "var(--muted)";
+    bb.style.borderColor= on ? "var(--accent)" : "var(--border)";
+  };
+})();
 document.getElementById("elemCustom").onclick=()=>{
   const s=prompt("원소 기호(예: Si, Na, Mg) 또는 그룹 라벨(예: CN, OCH3, COOH)을 입력하세요:");
   if(!s) return;
@@ -1652,9 +1700,21 @@ const HINTS = {
   arrow:"드래그하여 반응 화살표를 그립니다 (15° 각도 스냅) · 텍스트 도구로 조건·시약을 적어보세요",
 };
 const ZOOM_TIP = "마우스 휠로 확대/축소됩니다.";
-let _zoomTipOn = false;
+let _hintPhase = 0;   // 0=도구 안내, 1=휠 안내, 2=라이선스(키+이용기간)
+function _bcLicHint(){
+  try{
+    var l=JSON.parse(localStorage.getItem("bc_license")||"null");
+    if(l && l.key){
+      var d=l.plan||0, en=(typeof bcLang!=="undefined"&&bcLang==="en");
+      var lab = d>=365?(en?"1 YEAR":"1년") : d>=180?(en?"6 MONTHS":"6개월") : d>=30?(en?"1 MONTH":"1개월") : "";
+      return "🔑 "+l.key+(lab?" / "+lab:"");
+    }
+  }catch(e){}
+  return "";
+}
 function updateHint(){
-  if(_zoomTipOn){ document.getElementById("hint").textContent = ZOOM_TIP; return; }
+  if(_hintPhase===1){ document.getElementById("hint").textContent = ZOOM_TIP; return; }
+  if(_hintPhase===2){ var _lh=_bcLicHint(); if(_lh){ document.getElementById("hint").textContent=_lh; return; } }
   let h = HINTS[state.tool]||"";
   if(state.tool==="draw") h = `[${state.element}] `+h;
   if(state.tool==="arrow"){
@@ -1674,8 +1734,8 @@ function updateHint(){
   }
   document.getElementById("hint").textContent=h;
 }
-// 3분마다 일반 도구 안내 ↔ '확대/축소' 안내를 교대로 반복 표시
-setInterval(()=>{ _zoomTipOn = !_zoomTipOn; try{ updateHint(); }catch(e){} }, 180000);
+// 3분마다 도구 안내 → 확대/축소 안내 → 라이선스(키+이용기간) 순환 표시
+setInterval(()=>{ _hintPhase=(_hintPhase+1)%3; try{ updateHint(); }catch(e){} }, 180000);
 
 /* ================= 포인터 이벤트 ================= */
 cv.addEventListener("pointerdown", e=>{
@@ -2020,6 +2080,7 @@ function downDraw(p){
   }
   pushUndo();
   const na=addAtom(p.x,p.y,state.element);
+  if(state.bareElement) na.noH=true;   // [단독 원소] 모드: 자동 수소 없이 원소 그대로
   drag={mode:"bond", start:na, isNew:true, moved:false};
   afterChange();
 }
@@ -9239,7 +9300,30 @@ const T_EN = {
   "헤테로고리(고리 안에 O·N 포함)는 지원되지 않습니다.": "Heterocycles (rings containing O or N) are not supported.",
   "고리 안 삼중결합은 지원되지 않습니다.": "Triple bonds inside rings are not supported.",
   "고리에 붙은 카복실산/알데하이드/나이트릴(벤조산 등)은 지원되지 않습니다.": "Carboxylic acid/aldehyde/nitrile on rings (benzoic acid, etc.) are not supported.",
-  "구조가 없습니다.": "No structure."
+  "구조가 없습니다.": "No structure.",
+  "_v94_": "",
+  "정식판(유료 라이선스)": "Full version (paid license)",
+  "— 홈페이지에서 정식판(1개월·6개월·1년)을 구매하면 국가별 인증 키가 이메일로 발급됩니다": "— buy the full version (1-month / 6-month / 1-year) on the website and a country-coded license key is emailed to you",
+  "[언어/LANGUAGE] 단추": "[Language] button",
+  "— 로고 아래로 이동, 클릭 시 전체화면 언어 선택 팝업": "— moved below the logo; click it for a full-screen language picker",
+  "[단독 원소] 단추": "[Lone atom] button",
+  "— 왼쪽 '원소' 옆 [단독 원소]를 켜면 H·O·C 등을 자동 수소 없이 중성 원자 하나만 그릴 수 있습니다 (H⁺는 이 상태로 H를 찍은 뒤 [+전하])": "— turn on [Lone atom] next to 'Elements' on the left to draw a single neutral atom (H, O, C…) with no automatic hydrogens (for H⁺, place an H then use [+charge])",
+  "로고 클릭 → 버전·라이선스 안내": "Click the logo → version & license info",
+  "— 상단 [BOUNDY Chem] 로고를 누르면 현재 버전(무료·유료 한글·유료 International)과 라이선스 기간·키·만료일이 뜨고, [라이선스 해제]로 키를 지우거나 바꿀 수 있습니다": "— click the [BOUNDY Chem] logo to see the current edition (Free / Full Korean / Full International) with the license period, key and expiry; use [Reset license] to clear or change the key",
+  "'원소' 라벨 옆의 [단독 원소]를 켜면(파란색 활성) 원소를 클릭한 뒤 캔버스를 클릭할 때 자동 수소 없이 중성 원자 하나만 찍힙니다 — H·O·C 등을 단독으로 그릴 때 사용합니다. H⁺(수소 양이온)는 이 모드로 H를 찍은 뒤 [+전하]를 적용하세요. 다시 누르면 꺼져 원래대로 수소가 자동 표시됩니다.": "Turn on [Lone atom] next to the 'Elements' label (blue when active): after choosing an element, clicking the canvas places a single neutral atom with no automatic hydrogens — use it to draw a lone H, O, C, etc. For H⁺ (hydrogen cation), place an H in this mode then apply [+charge]. Press again to turn it off and hydrogens are shown automatically as usual.",
+  "BOUNDY Chem 로고": "BOUNDY Chem logo",
+  "좌측 상단 로고를 클릭하면 현재 버전(무료판·유료 한글·유료 International·웹 체험판)과 라이선스 기간·인증 키·만료일이 팝업으로 표시됩니다. 설치판에서는 팝업 안의 [라이선스 해제·변경]으로 저장된 키를 지우거나 새 키로 바꿀 수 있습니다(다른 PC로 옮길 때도 사용). 팝업은 [닫기]로만 닫힙니다.": "Click the top-left logo to show the current edition (Free / Full Korean / Full International / Web trial) with the license period, key and expiry. In the installed version, use [Reset · change license] inside the popup to clear the saved key or switch to a new one (also when moving to another PC). The popup closes only with [Close].",
+  "단독 원소": "Lone atom",
+  "단독 원소 모드 — 켜면 원소 기호를 자동 수소 없이 중성 원자 하나만 찍습니다 (예: H·O·C 단독). H⁺는 이 상태로 H를 찍은 뒤 [+전하]로 만드세요.": "Lone-atom mode — when on, clicking places a single neutral atom with no automatic hydrogens (e.g. a bare H, O, C). For H⁺, place an H in this mode then apply [+charge].",
+  "언어 / LANGUAGE": "Language",
+  "로고 아래 [🌐 언어 / LANGUAGE] 단추를 누르면 언어 선택 팝업이 뜨고, 앱 전체(메뉴·가이드·개발이력·3D·스펙트럼·정보)가 선택한 언어로 즉시 전환됩니다 (현재 한국어·English 지원).": "Press the [🌐 언어 / LANGUAGE] button below the logo to open the language picker; the whole app (menus, guide, change log, 3D, spectra, info) switches to the chosen language instantly (Korean and English supported for now).",
+  "하단 라이선스 표시": "License shown at the bottom",
+  "— 화면 하단에 인증 키·이용기간이 안내와 번갈아 표시": "— your license key and validity period appear at the bottom, alternating with the tips",
+  "_v93_": "",
+  "[한/영] 언어 전환": "[KO/EN] language toggle",
+  "— 상단 [한/영] 단추로 앱 전체(가이드·개발이력·3D·스펙트럼·정보)를 영어↔한국어 즉시 전환": "— the top [KO/EN] button instantly switches the whole app (guide, change log, 3D, spectra, info) between English and Korean",
+  "라이선스 인증": "License verification",
+  "— 한국공학대학교 구성원은 학교 이메일 인증으로 무료 키를 받아 설치판을 사용합니다 (6개월마다 재인증)": "— Tech University of Korea members get a free key via school-email verification to use the installed version (re-verify every 6 months)"
 };
 let bcLang = "ko";
 function _bcLookup(key){
@@ -9412,7 +9496,186 @@ function bcSetLang(lang){
   try{ if(typeof renderSpec==="function") renderSpec(); }catch(e){}
   try{ if(typeof draw3D==="function") draw3D(); else if(typeof render3D==="function") render3D(); }catch(e){}
 }
-document.getElementById("btnLang").onclick=()=> bcSetLang(bcLang==="ko"?"en":"ko");
+/* ===== 언어 선택 팝업 + 빌드 플래그 ===== */
+var BC_DEFAULT_LANG = "ko";   // 빌드 플래그: KOR 빌드="ko" / INT 빌드="en"
+var BC_EDITION = "free";      // 빌드 플래그: 무료 학교판="free" / 유료 정식판="paid"
+var BC_LANGS = [ {c:"ko",label:"한국어"}, {c:"en",label:"English"} ];   // A안: 한/영 (추후 언어 추가 가능)
+(function(){
+  var pop=document.getElementById("langPop"), list=document.getElementById("langPopList");
+  if(list){ BC_LANGS.forEach(function(L){ var b=document.createElement("button"); b.textContent=L.label;
+    b.style.cssText="padding:12px;font-size:15px;font-weight:700;border:1.5px solid #cbd5e1;border-radius:10px;background:#f8fafc;color:#1c2733;cursor:pointer;";
+    b.onclick=function(){ bcSetLang(L.c); if(pop) pop.style.display="none"; }; list.appendChild(b); }); }
+  var bl=document.getElementById("btnLang"); if(bl) bl.onclick=function(){ if(pop) pop.style.display="flex"; };
+  var cl=document.getElementById("langPopClose"); if(cl) cl.onclick=function(){ if(pop) pop.style.display="none"; };
+})();
+/* 기본 언어 적용 (INT 빌드는 영어로 부팅) */
+try{ if(BC_DEFAULT_LANG==="en") bcSetLang("en"); }catch(e){}
+
+/* ===== 로고 클릭 → 버전·에디션·라이선스 안내 팝업 (닫기로만 닫힘) + 라이선스 해제 ===== */
+(function(){
+  var logo=document.getElementById("brandName"), pop=document.getElementById("verPop"),
+      body=document.getElementById("verPopBody"), closeBtn=document.getElementById("verPopClose");
+  if(!logo||!pop) return;
+  function ymd(d){ return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
+  function isApp(){ return (typeof window.bcIsApp==="function") && window.bcIsApp(); }
+  function editionLabel(){
+    var en=(bcLang==="en");
+    if(!isApp()) return en?"Web trial":"웹 체험판";
+    var paid=(typeof BC_EDITION!=="undefined"&&BC_EDITION==="paid");
+    if(!paid) return en?"Free edition (school)":"무료판 (학교 인증)";
+    var intl=(typeof BC_DEFAULT_LANG!=="undefined"&&BC_DEFAULT_LANG==="en");
+    return intl?(en?"Full version · International":"유료판 · International")
+              :(en?"Full version · Korean":"유료판 · 한국어");
+  }
+  function planLabel(days){
+    if(!days) return "—";
+    if(bcLang==="en") return days>=365?"1 Year":days>=180?"6 Months":"1 Month";
+    return days>=365?"1년":days>=180?"6개월":"1개월";
+  }
+  function open(){
+    var en=(bcLang==="en");
+    var lic=(window.bcLicenseInfo)?window.bcLicenseInfo():null;
+    var L=[];
+    L.push("<b>"+(en?"Edition":"버전")+":</b> "+editionLabel());
+    if(isApp()){
+      if(lic&&lic.key){
+        L.push("<b>"+(en?"License":"라이선스 기간")+":</b> "+planLabel(lic.plan));
+        L.push("<b>"+(en?"Key":"인증 키")+":</b> "+lic.key);
+        if(lic.expiry) L.push("<b>"+(en?"Expires":"만료일")+":</b> "+ymd(new Date(lic.expiry)));
+      } else { L.push("<b>"+(en?"License":"라이선스")+":</b> "+(en?"(not entered)":"(미입력)")); }
+    }
+    L.push("<b>"+(en?"App version":"앱 버전")+":</b> V1.95");
+    var html=L.join("<br>");
+    if(isApp() && lic && lic.key){
+      html += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #e6ebf1;">'
+        + '<button id="verLicReset" style="width:100%;padding:11px;font-size:13.5px;font-weight:700;background:#fff;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:10px;cursor:pointer;">🔑 '
+        + (en?"Reset · change license":"라이선스 해제 · 변경")+'</button>'
+        + '<div style="margin-top:6px;font-size:11px;color:#8a99ab;line-height:1.6;">'
+        + (en?"Removes the saved key — you'll re-enter one next time (new key or another PC).":"해제하면 다음 실행 시 키를 다시 입력해야 합니다. 새 키로 바꾸거나 다른 PC로 옮길 때 사용하세요.")
+        + '</div></div>';
+    }
+    body.innerHTML=html;
+    var rb=document.getElementById("verLicReset");
+    if(rb) rb.onclick=function(){
+      var msg="라이선스를 해제할까요?\n다음 실행 시 키를 다시 입력해야 합니다.\nReset the license? You'll re-enter a key next time.";
+      if(window.confirm(msg)){ if(window.bcLicenseReset) window.bcLicenseReset(); pop.style.display="none"; }
+    };
+    pop.style.display="flex";
+  }
+  logo.style.cursor="pointer";
+  logo.title="버전 · 라이선스 정보 / Version · license info";
+  logo.onclick=open;
+  if(closeBtn) closeBtn.onclick=function(){ pop.style.display="none"; };
+})();
+
+/* ===== 라이선스 게이트 (설치판 전용) — 한국공학대학교 6개월 무료 키 ===== */
+(function(){
+  const LIC_URL  = "https://script.google.com/macros/s/AKfycbyLruixBr2bIVzJQjRwVq-Vu0BI-LbWHZcRy5H3BSlsuNNfgEKgas9UYFURp2r6hDp5/exec";
+  const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdCDf1QKFp6ly3YSsH40CcjsOFhVlabRs-ms7_ReuD06YpQAA/viewform";
+  const BUY_URL  = "https://www.boundychem.com";   // 유료판 재구매 페이지
+  const GRACE_MS = 14*24*3600*1000;   // 오프라인 유예 14일
+  const STORE = "bc_license";
+  // 만료일로부터 요금제(기간) 추정 → 가장 가까운 30/180/365일로 스냅 (하단 표시용)
+  function planDays(expISO){
+    var d=Math.round((new Date(expISO).getTime()-Date.now())/86400000);
+    var bk=[30,180,365], best=bk[0], bd=Math.abs(d-best);
+    for(var i=1;i<bk.length;i++){ var x=Math.abs(d-bk[i]); if(x<bd){bd=x;best=bk[i];} }
+    return best;
+  }
+  function isApp(){
+    try{
+      if(window.__TAURI__ || window.__TAURI_INTERNALS__) return true;                     // 설치판(EXE)
+      if(location.hostname==="localhost" && location.search.indexOf("__lictest")>=0) return true; // 로컬 테스트용
+    }catch(e){}
+    return false;
+  }
+  function read(){ try{ return JSON.parse(localStorage.getItem(STORE)||"null"); }catch(e){ return null; } }
+  function write(o){ try{ localStorage.setItem(STORE, JSON.stringify(o)); }catch(e){} }
+  function vUntil(expISO){ const e=new Date(expISO).getTime(); return Math.min(e, Date.now()+GRACE_MS); }
+  async function check(key){
+    const r = await fetch(LIC_URL+"?key="+encodeURIComponent(key), {cache:"no-store"});
+    return await r.json();
+  }
+  let ov;
+  const _paid = (typeof BC_EDITION!=="undefined" && BC_EDITION==="paid");
+  const _helpUrl = _paid ? BUY_URL : FORM_URL;
+  const _helpTxt = _paid ? "🛒 정식판 구매 · 재구매 / Buy · renew license" : "🎓 학교 이메일 인증으로 무료 키 받기 / Get a free key";
+  function build(){
+    ov = document.createElement("div");
+    ov.id="licOverlay";
+    ov.style.cssText="position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.93);display:flex;align-items:center;justify-content:center;font-family:'Segoe UI','Malgun Gothic',sans-serif;";
+    ov.innerHTML=
+      '<div style="background:#fff;max-width:440px;width:90%;border-radius:16px;padding:30px 28px;box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center;">'
+      +'<div style="font-size:30px;font-weight:800;color:#1c2733;">BOUNDY <span style="color:#2563eb;">Chem</span></div>'
+      +'<div id="licTitle" style="margin-top:14px;font-size:15px;font-weight:700;color:#1c2733;"></div>'
+      +'<div id="licMsg" style="margin-top:8px;font-size:12.5px;color:#66778a;line-height:1.6;white-space:pre-line;"></div>'
+      +'<input id="licKey" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" style="margin-top:16px;width:100%;box-sizing:border-box;padding:12px 14px;font-size:15px;letter-spacing:.06em;text-align:center;text-transform:uppercase;border:1.5px solid #cbd5e1;border-radius:10px;">'
+      +'<div id="licErr" style="margin-top:8px;font-size:12px;color:#dc2626;min-height:16px;"></div>'
+      +'<button id="licGo" style="margin-top:10px;width:100%;padding:13px;font-size:15px;font-weight:800;background:#2563eb;color:#fff;border:none;border-radius:10px;cursor:pointer;">인증 / Verify</button>'
+      +'<a id="licForm" href="'+_helpUrl+'" target="_blank" rel="noopener" style="display:block;margin-top:12px;font-size:12.5px;color:#2563eb;text-decoration:none;cursor:pointer;">'+_helpTxt+'</a>'
+      +'</div>';
+    document.body.appendChild(ov);
+    const go=ov.querySelector("#licGo"), inp=ov.querySelector("#licKey"), err=ov.querySelector("#licErr");
+    async function submit(){
+      const key=(inp.value||"").trim().toUpperCase();
+      if(!key){ err.style.color="#dc2626"; err.textContent="키를 입력하세요. / Enter your key."; return; }
+      go.disabled=true; err.style.color="#66778a"; err.textContent="확인 중… / Checking…";
+      try{
+        const res=await check(key);
+        if(res.valid){ write({key, expiry:res.expiry, validUntil:vUntil(res.expiry), lastCheck:Date.now(), plan:planDays(res.expiry)}); hide(); return; }
+        err.style.color="#dc2626";
+        err.textContent = res.reason==="expired" ? "만료된 키입니다. 재인증하세요. / Key expired — re-verify."
+          : res.reason==="revoked" ? "더 이상 유효하지 않은 키입니다. / Key no longer valid."
+          : "유효하지 않은 키입니다. / Invalid key.";
+      }catch(e){ err.style.color="#dc2626"; err.textContent="인터넷 연결을 확인하세요. / Check your connection."; }
+      go.disabled=false;
+    }
+    go.onclick=submit;
+    inp.addEventListener("keydown", function(e){ if(e.key==="Enter") submit(); });
+    const lf=ov.querySelector("#licForm");
+    if(lf) lf.addEventListener("click", function(e){
+      e.preventDefault();
+      try{ if(window.__TAURI__ && window.__TAURI__.opener && window.__TAURI__.opener.openUrl){ window.__TAURI__.opener.openUrl(_helpUrl); return; } }catch(err){}
+      try{ window.open(_helpUrl, "_blank"); }catch(err){}
+    });
+  }
+  function setState(state, prefill){
+    if(!ov) build();
+    ov.style.display="flex";
+    const T=ov.querySelector("#licTitle"), M=ov.querySelector("#licMsg"), inp=ov.querySelector("#licKey");
+    const map={
+      enter:["라이선스 인증이 필요합니다 / License required","학교 이메일 인증으로 받은 키를 입력하세요.\nEnter the key you received by school-email verification."],
+      expired:["라이선스가 만료되었습니다 / License expired","6개월이 지났습니다. 아래 링크에서 재인증 후 새 키를 입력하세요.\n6 months have passed — re-verify below and enter a new key."],
+      revoked:["라이선스가 더 이상 유효하지 않습니다 / License revoked","아래 링크에서 재인증 후 새 키를 입력하세요.\nRe-verify below and enter a new key."],
+      offline:["인터넷 연결이 필요합니다 / Internet required","14일마다 재확인이 필요합니다. 연결 후 [인증]을 다시 누르세요.\nA re-check is required every 14 days — reconnect and press Verify."]
+    };
+    const m=map[state]||map.enter;
+    T.textContent=m[0]; M.textContent=m[1];
+    if(inp) inp.value = prefill || "";
+    setTimeout(function(){ try{ inp.focus(); }catch(e){} },60);
+  }
+  function hide(){ if(ov) ov.style.display="none"; }
+  async function bg(key){ try{ const res=await check(key); if(res.valid){ var _p=read(); write({key, expiry:res.expiry, validUntil:vUntil(res.expiry), lastCheck:Date.now(), plan:(_p&&_p.plan)||planDays(res.expiry)}); } }catch(e){} }
+  async function gate(){
+    if(!isApp()) return;                                  // 웹/개발환경은 게이트 없음
+    const lic=read(), now=Date.now();
+    if(lic && lic.key && lic.validUntil && now < lic.validUntil){ bg(lic.key); return; }   // 캐시 유효 → 통과 + 백그라운드 재확인
+    if(lic && lic.key){
+      try{
+        const res=await check(lic.key);
+        if(res.valid){ write({key:lic.key, expiry:res.expiry, validUntil:vUntil(res.expiry), lastCheck:now, plan:(lic&&lic.plan)||planDays(res.expiry)}); return; }
+        setState(res.reason==="expired"?"expired":res.reason==="revoked"?"revoked":"enter", res.reason==="expired"||res.reason==="revoked"?"":lic.key);
+      }catch(e){ setState("offline", lic.key); }
+      return;
+    }
+    setState("enter","");
+  }
+  // AI설정 창의 [라이선스 해제] 버튼용 — 설치판에서만 동작
+  window.bcIsApp = function(){ return isApp(); };
+  window.bcLicenseInfo = function(){ if(!isApp()) return null; return read(); };
+  window.bcLicenseReset = function(){ if(!isApp()) return false; try{ localStorage.removeItem(STORE); }catch(e){} setState("enter",""); return true; };
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", gate); else gate();
+})();
 </script>
 
 <style>
@@ -9432,7 +9695,7 @@ document.getElementById("btnLang").onclick=()=> bcSetLang(bcLang==="ko"?"en":"ko
 </style>
 <div id="trialBanner">
   <span>🔒 <b>BOUNDY Chem 웹 체험판</b> — 모든 기능을 사용하려면 <b>구성원 전용 무료 설치판</b>을 이용하세요. (저장은 JPG만 가능)</span>
-  <a class="buy" href="https://tu.boundychem.com" target="_blank" rel="noopener">무료 설치판</a>
+  <a class="buy" href="https://tuk.boundychem.com" target="_blank" rel="noopener">무료 설치판</a>
 </div>
 <script>
 (function(){
