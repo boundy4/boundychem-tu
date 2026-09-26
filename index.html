@@ -306,6 +306,19 @@
     box-shadow:0 4px 18px rgba(37,99,235,.25); z-index:19; white-space:nowrap;
   }
   #traceModeBar.show, #traceColorBar.show{display:flex;}
+  #structColorBar{
+    position:absolute; top:56px; left:50%; transform:translateX(-50%);
+    background:var(--panel); border:1px solid var(--accent); border-radius:10px;
+    padding:7px 12px; font-size:12.5px; display:none; align-items:center; gap:7px;
+    box-shadow:0 4px 18px rgba(37,99,235,.25); z-index:19; white-space:nowrap;
+  }
+  #structColorBar.show{display:flex;}
+  #structColorBar .sw{ width:21px; height:21px; border-radius:50%; border:1.5px solid rgba(0,0,0,.2); cursor:pointer; padding:0; transition:transform .08s; }
+  #structColorBar .sw:hover{ transform:scale(1.15); }
+  #structColorBar .sw.elem{ background:conic-gradient(#d62121,#e08a1e,#c9a000,#1f9d55,#2144d6,#7a3ff2,#d62121); }
+  #structColorBar input[type=color]{ width:27px; height:23px; padding:0; border:1px solid var(--border); border-radius:5px; background:none; cursor:pointer; }
+  #structColorBar .scx{ border:none; background:none; cursor:pointer; font-size:15px; color:#8a95a3; padding:2px 5px; line-height:1; }
+  #structColorBar .scx:hover{ color:#d62121; }
   #aiBusy{
     position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
     background:rgba(28,39,51,.88); color:#fff; border-radius:12px;
@@ -421,10 +434,10 @@
 </header>
 
 <div id="langPop" style="display:none;position:fixed;inset:0;z-index:2147483100;background:rgba(15,23,42,.94);align-items:center;justify-content:center;font-family:'Segoe UI','Malgun Gothic',sans-serif;">
-  <div style="background:#fff;max-width:420px;width:90%;border-radius:16px;padding:28px 24px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.5);">
+  <div style="background:#fff;max-width:680px;width:92%;max-height:90vh;overflow:auto;border-radius:16px;padding:28px 24px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.5);">
     <div style="font-size:26px;font-weight:800;color:#1c2733;">BOUNDY <span style="color:#2563eb;">Chem</span></div>
     <div style="margin-top:12px;font-size:15px;font-weight:700;color:#1c2733;">언어 선택 · Choose language</div>
-    <div id="langPopList" style="margin-top:18px;display:flex;flex-direction:column;gap:10px;"></div>
+    <div id="langPopList" style="margin-top:18px;display:grid;grid-auto-flow:column;gap:10px 12px;"></div>
     <button id="langPopClose" style="margin-top:16px;background:none;border:none;color:#8a99ab;font-size:13px;cursor:pointer;">닫기 · Close</button>
   </div>
 </div>
@@ -725,6 +738,19 @@
       <button class="btn" id="tcBlack">모두 검정</button>
       <button class="btn" id="tcOrig">원본 색 유지</button>
       <button class="btn" id="tcRec">추천 색 (원소별)</button>
+    </div>
+    <div id="structColorBar">
+      <span style="font-weight:700;">🎨 <span id="scTitle">컬러 설정</span></span>
+      <button class="sw elem" id="scElement" title="원소 기본색"></button>
+      <button class="sw" data-col="#1c2733" style="background:#1c2733;" title="검정"></button>
+      <button class="sw" data-col="#d62121" style="background:#d62121;" title="빨강"></button>
+      <button class="sw" data-col="#2144d6" style="background:#2144d6;" title="파랑"></button>
+      <button class="sw" data-col="#1f9d55" style="background:#1f9d55;" title="초록"></button>
+      <button class="sw" data-col="#7a3ff2" style="background:#7a3ff2;" title="보라"></button>
+      <button class="sw" data-col="#e08a1e" style="background:#e08a1e;" title="주황"></button>
+      <button class="sw" data-col="#8a95a3" style="background:#8a95a3;" title="회색"></button>
+      <input type="color" id="scCustom" value="#1c2733" title="사용자 색">
+      <button class="scx" id="scClose" title="닫기">✕</button>
     </div>
     <div id="aiBusy">⏳ AI가 그림을 분석하는 중입니다… (수 초~수십 초)</div>
     <div id="restoreBar">
@@ -2525,6 +2551,8 @@ function downSelect(p,shift){
   if(!shift){
     const fb=state._fmtBtn;
     if(fb && p.x>=fb.x&&p.x<=fb.x+fb.w&&p.y>=fb.y&&p.y<=fb.y+fb.h){ openFmtDialog(); return; }
+    const cb=state._colBtn;
+    if(cb && p.x>=cb.x&&p.x<=cb.x+cb.w&&p.y>=cb.y&&p.y<=cb.y+cb.h){ openStructColorBar(); return; }
     const ck=hitCurveHandle(p);
     if(ck){ drag={mode:"curveK", ar:ck, pushed:false}; return; }
     const rb=hitRotateHandle(p);
@@ -2584,6 +2612,7 @@ function downSelect(p,shift){
 function clearSel(){
   state.selAtoms.clear(); state.selBonds.clear();
   state.selTexts.clear(); state.selArrows.clear();
+  const scb=document.getElementById("structColorBar"); if(scb) scb.classList.remove("show");
 }
 function movingAtomIds(){
   const ids=new Set(state.selAtoms);
@@ -2927,6 +2956,7 @@ function drawMolecule(c,opts){
 
   // 선택 경계 상자 + 크기 조절 핸들
   state._fmtBtn=null;
+  state._colBtn=null;
   if(inter && state.tool==="select" && hasSelection() && !state.band){
     const bb=selectionBounds();
     if(bb){
@@ -2971,6 +3001,23 @@ function drawMolecule(c,opts){
         c.textAlign="center"; c.textBaseline="middle";
         c.fillText("서식", fx+bw2/2, fy+bh2/2+0.5*k);
         state._fmtBtn={x:fx, y:fy, w:bw2, h:bh2};
+      }
+      // [컬러 설정] 단추 — 원자/결합이 선택돼 있을 때 점선 사각형 아래(서식 버튼이 있으면 그 아래 줄)
+      if(movingAtomIds().size>0){
+        const k=1/Math.min(view.scale,1.5);
+        const label="🎨 "+_bcMsg("컬러 설정");
+        c.font=`700 ${10.5*k}px "Segoe UI", sans-serif`;
+        c.textAlign="center"; c.textBaseline="middle";
+        const cbw=c.measureText(label).width+18*k, cbh=17*k;
+        const cfx=bb.x+bb.w/2-cbw/2;
+        const cfy=bb.y+bb.h+8*k + (state._fmtBtn? (17*k+6*k):0);
+        c.fillStyle="#ffffff"; c.strokeStyle="#2563eb"; c.lineWidth=1.2/view.scale;
+        c.beginPath();
+        if(c.roundRect) c.roundRect(cfx,cfy,cbw,cbh,cbh/2); else c.rect(cfx,cfy,cbw,cbh);
+        c.fill(); c.stroke();
+        c.fillStyle="#2563eb";
+        c.fillText(label, cfx+cbw/2, cfy+cbh/2+0.5*k);
+        state._colBtn={x:cfx, y:cfy, w:cbw, h:cbh};
       }
     }
   }
@@ -3159,7 +3206,7 @@ function drawBond(c,b){
   const x1=a1.x+ux*t1, y1=a1.y+uy*t1;
   const x2=a2.x-ux*t2, y2=a2.y-uy*t2;
   const px=-uy, py=ux;
-  c.strokeStyle="#1c2733"; c.fillStyle="#1c2733";
+  c.strokeStyle=b.col||"#1c2733"; c.fillStyle=b.col||"#1c2733";
   c.lineWidth=1.7; c.lineCap="round";
 
   // 장거리 S-S(이황화) 결합: 직선으로 구조를 가로지르지 않고 직각 우회 (교과서식)
@@ -4575,6 +4622,34 @@ function applyTraceColor(mode){
 document.getElementById("tcBlack").onclick=()=>applyTraceColor("black");
 document.getElementById("tcOrig").onclick=()=>applyTraceColor("orig");
 document.getElementById("tcRec").onclick=()=>applyTraceColor("rec");
+
+/* ---------- 구조식 컬러 설정 (선택 전체 색 지정) ---------- */
+let _scDirty=false;
+function openStructColorBar(){
+  _scDirty=false;
+  const t=document.getElementById("scTitle"); if(t) t.textContent=_bcMsg("컬러 설정");
+  const el=document.getElementById("scElement"); if(el) el.title=_bcMsg("원소 기본색");
+  const cu=document.getElementById("scCustom"); if(cu) cu.title=_bcMsg("사용자 색");
+  const cl=document.getElementById("scClose"); if(cl) cl.title=_bcMsg("닫기");
+  document.getElementById("structColorBar").classList.add("show");
+}
+function closeStructColorBar(){ const b=document.getElementById("structColorBar"); if(b) b.classList.remove("show"); }
+function applyStructColor(col){
+  const ids=movingAtomIds();
+  if(!ids.size) return;
+  if(!_scDirty){ pushUndo(); _scDirty=true; }
+  for(const id of ids){ const a=atomById(id); if(a){ if(col==="element") delete a.col; else a.col=col; } }
+  for(const b of bonds){ if(ids.has(b.a1)&&ids.has(b.a2)){ if(col==="element") delete b.col; else b.col=col; } }
+  afterChange();
+}
+(function(){
+  const bar=document.getElementById("structColorBar");
+  if(!bar) return;
+  bar.querySelectorAll(".sw[data-col]").forEach(btn=>{ btn.onclick=()=>applyStructColor(btn.getAttribute("data-col")); });
+  const el=document.getElementById("scElement"); if(el) el.onclick=()=>applyStructColor("element");
+  const cu=document.getElementById("scCustom"); if(cu) cu.oninput=()=>applyStructColor(cu.value);
+  const cl=document.getElementById("scClose"); if(cl) cl.onclick=closeStructColorBar;
+})();
 
 /* 흉내그리기 모드 선택 팝업 (직접/자동) */
 document.getElementById("tmManual").onclick=()=>{
@@ -8585,6 +8660,8 @@ window.addEventListener("keyup", e=>{ if(e.code==="Space") spaceDown=false; });
    [한/영] 단추로 화면 전 요소(텍스트·툴팁·placeholder·alert/confirm/토스트)를 영어로 전환.
    사전에 없는 문구는 한국어로 남는다(점진적으로 사전 확장). 동적 요소는 MutationObserver로 자동 번역. */
 const T_EN = {
+  // 구조식 컬러 설정
+  "컬러 설정":"Color","원소 기본색":"Element colors","사용자 색":"Custom color",
   // 상단 툴바
   "열기 (JSON)":"Open (JSON)","저장":"Save","저장 (JSON)":"Save (JSON)","MOL 내보내기":"Export MOL","PNG 내보내기":"Export PNG",
   "SMILES 복사":"Copy SMILES","SMILES그리기":"Draw from SMILES","↩ 취소":"↩ Undo","↪ 다시":"↪ Redo",
@@ -9325,11 +9402,16 @@ const T_EN = {
   "라이선스 인증": "License verification",
   "— 한국공학대학교 구성원은 학교 이메일 인증으로 무료 키를 받아 설치판을 사용합니다 (6개월마다 재인증)": "— Tech University of Korea members get a free key via school-email verification to use the installed version (re-verify every 6 months)"
 };
+/* ===== 다국어(i18n) 확장 — INT 빌드 전용. 기존 한/영 동작은 불변 ===== */
+var BC_TR = {};        /*BC_TR_INJECT*/   // { "ja": { "한국어원문":"訳文", ... }, ... }  (빌드시 주입)
+var BC_FRAG = {};      // { "ja": [[pat,rep],...] }  선택적 프래그먼트 사전
+var _bcDict = T_EN;    // 현재 활성 사전 (bcLang==="ko"일 땐 미사용)
+var _bcFragTbl = null; // 현재 활성 프래그먼트 (T_FRAG 정의 후 기본값 설정)
 let bcLang = "ko";
 function _bcLookup(key){
   const k = key.replace(/\s+/g," ").trim();
-  let en = T_EN[k];
-  if(en===undefined){ const m=k.match(/^(\[[^\]]*\]\s*)([\s\S]+)$/); if(m){ const e2=T_EN[m[2]]; if(e2!==undefined) en=m[1]+e2; } }
+  let en = _bcDict[k];
+  if(en===undefined){ const m=k.match(/^(\[[^\]]*\]\s*)([\s\S]+)$/); if(m){ const e2=_bcDict[m[2]]; if(e2!==undefined) en=m[1]+e2; } }
   return en;
 }
 // 보간(${}) 문자열·연결 문자열 대응: 정확 매칭 실패 시 조각/정규식으로 치환
@@ -9416,15 +9498,16 @@ const T_FRAG = [
   ["-OH (알코올)", "-OH (alcohol)"],
   ["-SH (싸이올)", "-SH (thiol)"]
 ];
+_bcFragTbl = T_FRAG;   // 기본 프래그먼트 = 영어
 function _bcFrag(s){
   let o = String(s);
-  for(const [p,r] of T_FRAG){ o = (p instanceof RegExp) ? o.replace(p,r) : o.split(p).join(r); }
+  for(const [p,r] of (_bcFragTbl||[])){ o = (p instanceof RegExp) ? o.replace(p,r) : o.split(p).join(r); }
   return o;
 }
 // 캔버스에 그려지는 텍스트(스펙트럼 라벨·축·오차 박스 등)도 영어로 — fillText/strokeText 가로채기
 function _bcCanvasText(t){
-  if(bcLang!=="en" || typeof t!=="string" || !HAN.test(t)) return t;
-  const k=t.trim(); const en=T_EN[k];
+  if(bcLang==="ko" || typeof t!=="string" || !HAN.test(t)) return t;
+  const k=t.trim(); const en=_bcDict[k];
   if(en!==undefined) return t.replace(k,en);
   return _bcFrag(t);
 }
@@ -9469,7 +9552,7 @@ let _bcObserver = null;
 function _bcObserve(){
   if(_bcObserver) return;
   _bcObserver = new MutationObserver(muts=>{
-    if(bcLang!=="en" || _bcBusy) return;
+    if(bcLang==="ko" || _bcBusy) return;
     for(const m of muts){
       if(m.type==="childList"){ m.addedNodes.forEach(nd=>{ if(nd.nodeType===1||nd.nodeType===3) _bcTranslate(nd); }); }
       else if(m.type==="characterData"){ const tn=m.target; const raw=tn.nodeValue||""; const key=raw.trim(); const en=_bcLookup(key); if(en!==undefined&&en!==key){ _bcBusy=true; _bcTexts.push({node:tn,ko:raw}); tn.nodeValue=raw.replace(key,en); _bcBusy=false; } else if(HAN.test(raw)){ const f=_bcFrag(raw); if(f!==raw){ _bcBusy=true; _bcTexts.push({node:tn,ko:raw}); tn.nodeValue=f; _bcBusy=false; } } }
@@ -9480,18 +9563,26 @@ function _bcObserve(){
 }
 // alert/confirm 메시지도 사전으로 번역
 const _bcAlert = window.alert.bind(window), _bcConfirm = window.confirm.bind(window);
-function _bcMsg(m){ if(bcLang!=="en") return m; const s=String(m); const en=T_EN[s.trim()]; if(en!==undefined) return en; return HAN.test(s)? _bcFrag(s) : s; }
+function _bcMsg(m){ if(bcLang==="ko") return m; const s=String(m); const en=_bcDict[s.trim()]; if(en!==undefined) return en; return HAN.test(s)? _bcFrag(s) : s; }
 window.alert = m=>_bcAlert(_bcMsg(m));
 window.confirm = m=>_bcConfirm(_bcMsg(m));
 function bcSetLang(lang){
   if(lang===bcLang) return;
-  if(lang==="en"){ bcLang="en"; _bcTranslate(document.body); _bcObserve(); }
-  else { bcLang="ko";
-    for(const t of _bcTexts){ try{ t.node.nodeValue=t.ko; }catch(e){} }
-    for(const a of _bcAttrs){ try{ a.el.setAttribute(a.attr,a.ko); }catch(e){} }
-    _bcTexts.length=0; _bcAttrs.length=0;
+  // 1) 항상 먼저 한국어 원문으로 복원 (다른 언어 → 다른 언어 전환도 안전)
+  for(const t of _bcTexts){ try{ t.node.nodeValue=t.ko; }catch(e){} }
+  for(const a of _bcAttrs){ try{ a.el.setAttribute(a.attr,a.ko); }catch(e){} }
+  _bcTexts.length=0; _bcAttrs.length=0;
+  bcLang="ko"; _bcDict=T_EN; _bcFragTbl=T_FRAG;
+  // 2) 대상 언어로 전환 (ko가 아니면 활성 사전 지정 후 번역)
+  if(lang!=="ko"){
+    _bcDict   = (lang==="en") ? T_EN   : (BC_TR[lang]   || {});
+    _bcFragTbl= (lang==="en") ? T_FRAG : (BC_FRAG[lang] || []);
+    bcLang=lang;
+    _bcTranslate(document.body); _bcObserve();
   }
-  const b=document.getElementById("btnLang"); if(b) b.classList.toggle("keyOk", bcLang==="en");
+  // 3) RTL 언어(아랍어·히브리어) 방향 전환
+  try{ document.documentElement.setAttribute("dir", (lang==="ar"||lang==="he")?"rtl":"ltr"); }catch(e){}
+  const b=document.getElementById("btnLang"); if(b) b.classList.toggle("keyOk", bcLang!=="ko");
   try{ if(typeof render==="function") render(); }catch(e){}
   try{ if(typeof renderSpec==="function") renderSpec(); }catch(e){}
   try{ if(typeof draw3D==="function") draw3D(); else if(typeof render3D==="function") render3D(); }catch(e){}
@@ -9499,12 +9590,29 @@ function bcSetLang(lang){
 /* ===== 언어 선택 팝업 + 빌드 플래그 ===== */
 var BC_DEFAULT_LANG = "ko";   // 빌드 플래그: KOR 빌드="ko" / INT 빌드="en"
 var BC_EDITION = "free";      // 빌드 플래그: 무료 학교판="free" / 유료 정식판="paid"
-var BC_LANGS = [ {c:"ko",label:"한국어"}, {c:"en",label:"English"} ];   // A안: 한/영 (추후 언어 추가 가능)
+var BC_LANGS_ALL = [
+  {c:"ko",label:"한국어"},{c:"en",label:"English"},{c:"ja",label:"日本語"},{c:"fr",label:"Français"},
+  {c:"ru",label:"Русский"},{c:"pt",label:"Português"},{c:"es",label:"Español"},{c:"de",label:"Deutsch"},
+  {c:"ar",label:"العربية"},{c:"hi",label:"हिन्दी"},{c:"it",label:"Italiano"},{c:"nl",label:"Nederlands"},
+  {c:"pl",label:"Polski"},{c:"sv",label:"Svenska"},{c:"no",label:"Norsk"},{c:"da",label:"Dansk"},
+  {c:"fi",label:"Suomi"},{c:"cs",label:"Čeština"},{c:"el",label:"Ελληνικά"},{c:"hu",label:"Magyar"},
+  {c:"sk",label:"Slovenčina"},{c:"sl",label:"Slovenščina"},{c:"hr",label:"Hrvatski"},{c:"ro",label:"Română"},
+  {c:"bg",label:"Български"},{c:"lt",label:"Lietuvių"},{c:"lv",label:"Latviešu"},{c:"et",label:"Eesti"},
+  {c:"is",label:"Íslenska"},{c:"he",label:"עברית"},{c:"tr",label:"Türkçe"},{c:"mt",label:"Malti"},
+  {c:"lb",label:"Lëtzebuergesch"}
+];
+// INT 빌드(BC_DEFAULT_LANG==="en")에서만 다국어 노출. 그 외(KOR/무료)는 한/영만.
+// 번역 사전(BC_TR)이 주입된 언어 + 한/영만 표시(개발 중 미완성 언어 숨김).
+var BC_LANGS = (BC_DEFAULT_LANG==="en")
+  ? BC_LANGS_ALL.filter(function(L){ return L.c==="ko" || L.c==="en" || BC_TR[L.c]; })
+  : [ {c:"ko",label:"한국어"}, {c:"en",label:"English"} ];
 (function(){
   var pop=document.getElementById("langPop"), list=document.getElementById("langPopList");
   if(list){ BC_LANGS.forEach(function(L){ var b=document.createElement("button"); b.textContent=L.label;
     b.style.cssText="padding:12px;font-size:15px;font-weight:700;border:1.5px solid #cbd5e1;border-radius:10px;background:#f8fafc;color:#1c2733;cursor:pointer;";
-    b.onclick=function(){ bcSetLang(L.c); if(pop) pop.style.display="none"; }; list.appendChild(b); }); }
+    b.onclick=function(){ bcSetLang(L.c); if(pop) pop.style.display="none"; }; list.appendChild(b); });
+    /* 3열 배치: 언어 수에 맞춰 열당 행수 = ceil(개수/3) → 33개면 11행×3열, 한/영만이면 1행 */
+    list.style.gridTemplateRows="repeat("+Math.max(1,Math.ceil(BC_LANGS.length/3))+",auto)"; }
   var bl=document.getElementById("btnLang"); if(bl) bl.onclick=function(){ if(pop) pop.style.display="flex"; };
   var cl=document.getElementById("langPopClose"); if(cl) cl.onclick=function(){ if(pop) pop.style.display="none"; };
 })();
