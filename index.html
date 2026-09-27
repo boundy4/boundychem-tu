@@ -48,17 +48,17 @@
   .btn:disabled:hover{background:var(--panel); border-color:var(--border);}
   .sep{width:1px; height:22px; background:var(--border); margin:0 4px;}
   /* 캔버스 우클릭 컨텍스트 메뉴 */
-  #ctxMenu{
+  #ctxMenu, #atomCtxMenu{
     position:fixed; z-index:300; display:none; min-width:130px;
     background:var(--panel); border:1px solid var(--border); border-radius:9px;
     box-shadow:0 6px 22px rgba(28,39,51,.18); padding:5px; flex-direction:column;
   }
-  #ctxMenu.show{display:flex;}
-  #ctxMenu button{
+  #ctxMenu.show, #atomCtxMenu.show{display:flex;}
+  #ctxMenu button, #atomCtxMenu button{
     border:none; background:none; text-align:left; padding:7px 12px;
     font-size:12.5px; color:var(--text); border-radius:6px; cursor:pointer;
   }
-  #ctxMenu button:hover{background:var(--accent-soft);}
+  #ctxMenu button:hover, #atomCtxMenu button:hover{background:var(--accent-soft);}
   #ctxMenu button:disabled{opacity:.4; cursor:default;}
   #ctxMenu button:disabled:hover{background:none;}
   /* [저장] 드롭다운 메뉴 */
@@ -456,6 +456,10 @@
   <button id="ctxPaste">붙여넣기</button>
   <button id="ctxInfo">정보</button>
 </div>
+<div id="atomCtxMenu">
+  <button id="atomCtxLabel">탄소 기호 표시</button>
+  <button id="atomCtxDelete">삭제</button>
+</div>
 
 <div id="saveMenu">
   <button id="svJson">JSON 저장 (작업 파일)</button>
@@ -684,7 +688,7 @@
     </div>
 
     <div id="credits">
-      V1.95 (2026.9)<br>
+      V1.96 (2026.9)<br>
       개발자: 정윤성<br>
       한국공학대학교<br>
       생명화학공학과
@@ -770,6 +774,7 @@
       <button class="fmtCh" data-ch="±" title="플러스마이너스">±</button>
       <button class="fmtCh" data-ch="⇌" title="평형 기호">⇌</button>
       <button class="fmtCh" data-ch="≡" title="동등 기호 (공명 혼성 표기)">≡</button>
+      <button class="fmtCh" data-ch="+" title="반응식 + 부호 (화학식과 화학식 사이)">+</button>
       <button class="fmtCh" data-ch="→" title="화살표">→</button>
       <button class="fmtCh" data-ch="α" title="알파">α</button>
       <button class="fmtCh" data-ch="β" title="베타">β</button>
@@ -945,6 +950,12 @@
           최신 버전이 위에 있습니다 · BOUNDY Chem — 개발: 정윤성 (한국공학대학교 생명화학공학과)
         </div>
         <table class="hTable">
+          <tr><td>V1.96<br>(2026.9)</td><td>
+            · <b>구조식 컬러 설정</b> — 구조를 선택하면 점선 사각형 아래 [컬러 설정] 단추로 원자·결합 전체 색을 원소 기본색·검정·원하는 단색으로 지정<br>
+            · <b>탄소 기호 표시</b> — 골격식에서 생략된 탄소를 우클릭 메뉴(또는 더블클릭)로 C·CH·CH₂·CH₃ 명시 표기<br>
+            · <b>SMILES 다중 그리기</b> — [SMILES그리기]에 쉼표(,)로 여러 SMILES를 넣으면 순서대로 나열해 동시에 그림<br>
+            · <b>글꼴 크기 선택 범위</b> — 일부만 선택하면 그 부분만, 전체 선택·미선택이면 캔버스 전체 글자 크기 변경<br>
+            · <b>텍스트 특수문자에 + 추가</b> — 반응식의 화학식과 화학식 사이 + 부호</td></tr>
           <tr><td>V1.95<br>(2026.9)</td><td>
             · <b>[단독 원소] 단추</b> — 왼쪽 '원소' 옆 [단독 원소]를 켜면 H·O·C 등을 자동 수소 없이 중성 원자 하나만 그릴 수 있습니다 (H⁺는 이 상태로 H를 찍은 뒤 [+전하])<br>
             · <b>로고 클릭 → 버전·라이선스 안내</b> — 상단 [BOUNDY Chem] 로고를 누르면 현재 버전(무료·유료 한글·유료 International)과 라이선스 기간·키·만료일이 뜨고, [라이선스 해제]로 키를 지우거나 바꿀 수 있습니다</td></tr>
@@ -1781,7 +1792,11 @@ cv.addEventListener("pointerdown", e=>{
   }
   if(e.button===2){  // 우클릭 빠른 삭제
     const a=findAtom(p.x,p.y);
-    if(a){ pushUndo(); deleteAtom(a); afterChange(); return; }
+    if(a){
+      // 탄소(결합 있고 전하 없음): 컨텍스트 메뉴(기호 표시/숨김 + 삭제). 그 외 원자는 즉시 삭제.
+      if(a.el==="C"&&bondsOf(a).length>0&&a.charge===0){ showAtomCtx(e, a); return; }
+      pushUndo(); deleteAtom(a); afterChange(); return;
+    }
     const b=findBond(p.x,p.y);
     if(b){ pushUndo(); deleteBond(b); afterChange(); return; }
     const t=findText(p.x,p.y);
@@ -2939,9 +2954,9 @@ function drawMolecule(c,opts){
     const col = t.str.startsWith("δ+") ? "#2144d6"
               : (t.str.startsWith("δ-")||t.str.startsWith("δ−")) ? "#d62121" : "#1c2733";
     if(isDelta)
-      drawRich(c, t.x, t.y, t.str, Math.round(state.fontSize*1.15), col, '"Times New Roman", Georgia, serif', true);
+      drawRich(c, t.x, t.y, t.str, Math.round((t.fs||state.fontSize)*1.15), col, '"Times New Roman", Georgia, serif', true);
     else
-      drawRich(c, t.x, t.y, t.str, state.fontSize, col);
+      drawRich(c, t.x, t.y, t.str, t.fs||state.fontSize, col);
   }
 
   // 러버밴드
@@ -3573,9 +3588,10 @@ function chargeText(q,plain){
 }
 
 function layoutLabel(c,a){
+  /* a.fs: 개별 원자 글꼴 크기 오버라이드(부분 선택 시 지정) */
   const info=labelInfo(a);
   if(!info.show) return null;
-  const fs=state.fontSize;
+  const fs=a.fs||state.fontSize;
   const mainFont=`600 ${fs}px ${fontCss()}`;
   const subFont=`600 ${Math.max(7,Math.round(fs*0.68))}px ${fontCss()}`;
   const dySub=fs*0.32, dySup=-fs*0.40;
@@ -3953,6 +3969,29 @@ function showCtxMenu(e,p){
 }
 function hideCtxMenu(){ ctxMenu.classList.remove("show"); }
 
+/* ---------- 탄소 원자 우클릭 메뉴: 기호 표시/숨김 · 삭제 ---------- */
+const atomCtxMenu=document.getElementById("atomCtxMenu");
+let atomCtxTarget=null;
+function showAtomCtx(e, a){
+  atomCtxTarget=a;
+  const lb=document.getElementById("atomCtxLabel");
+  if(lb) lb.textContent=_bcMsg(a.showL? "탄소 기호 숨김" : "탄소 기호 표시");
+  const del=document.getElementById("atomCtxDelete");
+  if(del) del.textContent=_bcMsg("삭제");
+  atomCtxMenu.style.left=Math.min(e.clientX, innerWidth-150)+"px";
+  atomCtxMenu.style.top=Math.min(e.clientY, innerHeight-90)+"px";
+  atomCtxMenu.classList.add("show");
+}
+function hideAtomCtx(){ atomCtxMenu.classList.remove("show"); }
+document.getElementById("atomCtxLabel").onclick=()=>{
+  hideAtomCtx();
+  if(atomCtxTarget){ pushUndo(); atomCtxTarget.showL=!atomCtxTarget.showL; afterChange(); }
+};
+document.getElementById("atomCtxDelete").onclick=()=>{
+  hideAtomCtx();
+  if(atomCtxTarget){ pushUndo(); deleteAtom(atomCtxTarget); afterChange(); }
+};
+
 /* ---------- 우클릭 [정보]: 분자 정보 팝업 (캔버스 오른쪽 벽 도킹) ---------- */
 function componentOfAtom(startId){
   const comp=new Set([startId]); const q=[startId];
@@ -4200,7 +4239,7 @@ document.getElementById("ctxInfo").onclick=()=>{
   document.getElementById("infoPanel").classList.add("show");
 };
 document.getElementById("infoClose").onclick=()=>document.getElementById("infoPanel").classList.remove("show");
-document.addEventListener("pointerdown", e=>{ if(!ctxMenu.contains(e.target)) hideCtxMenu(); }, true);
+document.addEventListener("pointerdown", e=>{ if(!ctxMenu.contains(e.target)) hideCtxMenu(); if(!atomCtxMenu.contains(e.target)) hideAtomCtx(); }, true);
 window.addEventListener("keydown", e=>{ if(e.key==="Escape") hideCtxMenu(); });
 
 function copySelectionOrAll(){
@@ -4744,14 +4783,28 @@ function applyFontUI(){
 document.getElementById("fontFamilySel").onchange=e=>{
   state.fontKey=e.target.value; savePrefs(); render();
 };
-document.getElementById("fontMinus").onclick=()=>{
-  state.fontSize=Math.max(9, state.fontSize-1);
-  applyFontUI(); savePrefs(); render();
-};
-document.getElementById("fontPlus").onclick=()=>{
-  state.fontSize=Math.min(28, state.fontSize+1);
-  applyFontUI(); savePrefs(); render();
-};
+// 글꼴 크기 변경 범위: 부분 선택 시 → 선택한 원자·텍스트만 / 전체선택·미선택 시 → 캔버스 전체
+function changeFont(delta){
+  const nSelA=state.selAtoms.size, nSelT=state.selTexts.size;
+  const partial=(nSelA||nSelT) && !(nSelA===atoms.length && nSelT===texts.length);
+  const clamp=v=>Math.max(9, Math.min(28, v));
+  if(partial){
+    pushUndo();
+    for(const id of state.selAtoms){ const a=atomById(id); if(a) a.fs=clamp((a.fs||state.fontSize)+delta); }
+    for(const id of state.selTexts){ const t=byId(texts,id); if(t) t.fs=clamp((t.fs||state.fontSize)+delta); }
+    afterChange();
+  }else{
+    const hadOverride = atoms.some(a=>a.fs!=null) || texts.some(t=>t.fs!=null);
+    if(hadOverride) pushUndo();
+    state.fontSize=clamp(state.fontSize+delta);
+    for(const a of atoms) delete a.fs;       // 전역 변경 시 개별 오버라이드 해제 → 모든 글자 균일
+    for(const t of texts) delete t.fs;
+    applyFontUI(); savePrefs();
+    hadOverride? afterChange() : render();
+  }
+}
+document.getElementById("fontMinus").onclick=()=>changeFont(-1);
+document.getElementById("fontPlus").onclick=()=>changeFont(1);
 document.getElementById("btnSave").onclick=()=>{
   download("structure.json", serialize(), "application/json");
 };
@@ -5099,6 +5152,49 @@ function buildMoleculeFromGraph(g){
   return atoms.length;
 }
 
+/* ---- 다중 SMILES: 쉼표(,)/줄바꿈으로 여러 개 입력 → 순서대로 나열 배치 ---- */
+function _snapCurrentMol(){
+  const xs=atoms.map(a=>a.x), ys=atoms.map(a=>a.y);
+  const minx=Math.min(...xs), miny=Math.min(...ys);
+  const idx=new Map(atoms.map((a,i)=>[a.id,i]));
+  return {
+    atoms: atoms.map(a=>({x:a.x-minx, y:a.y-miny, el:a.el, charge:a.charge||0, rad:a.rad||0, col:a.col, showL:a.showL, lp:a.lp, qp:a.qp})),
+    bonds: bonds.map(b=>({i:idx.get(b.a1), j:idx.get(b.a2), order:b.order, stereo:b.stereo||0, col:b.col})),
+    w: Math.max(...xs)-minx, h: Math.max(...ys)-miny
+  };
+}
+function _layoutGraphIsolated(g){
+  const sA=atoms, sB=bonds;
+  atoms=[]; bonds=[];
+  try{
+    const pos=layoutGraph(g);
+    const idmap=g.atoms.map((ga,k)=>{ const a=addAtom(pos[k].x,pos[k].y,ga.el); a.charge=ga.charge||0; return a; });
+    for(const b of g.bonds) addBond(idmap[b.i], idmap[b.j], b.order||1, 0);
+    cleanCore(atoms, atoms.map(()=>true));
+    cleanCore(atoms, atoms.map(()=>true));
+    return _snapCurrentMol();
+  } finally { atoms=sA; bonds=sB; }
+}
+function drawMultiFromGraphs(graphs){
+  const snaps=graphs.map(_layoutGraphIsolated);
+  const total=snaps.reduce((s,m)=>s+m.atoms.length,0);
+  if(total>400) throw new Error("원자 400개 초과 구조는 지원되지 않습니다.");
+  pushUndo();
+  atoms=[]; bonds=[];
+  state.selAtoms.clear(); state.selBonds.clear(); state.selTexts.clear(); state.selArrows.clear(); state.hover=null;
+  const GAPX=42, GAPY=48, MAXROW=760;   // 가로로 나열, 폭 초과 시 줄바꿈
+  let cx=0, cy=0, rowH=0;
+  for(const s of snaps){
+    if(cx>0 && cx+s.w>MAXROW){ cx=0; cy+=rowH+GAPY; rowH=0; }
+    const im=s.atoms.map(a=>{ const na=addAtom(cx+a.x, cy+a.y, a.el); na.charge=a.charge; if(a.rad)na.rad=a.rad; if(a.col)na.col=a.col; if(a.showL)na.showL=a.showL; if(a.lp)na.lp=a.lp; if(a.qp)na.qp=a.qp; return na; });
+    for(const b of s.bonds){ const nb=addBond(im[b.i], im[b.j], b.order, b.stereo); if(nb&&b.col) nb.col=b.col; }
+    cx += s.w + GAPX;
+    rowH = Math.max(rowH, s.h);
+  }
+  afterChange(); fitView();
+  return atoms.length;
+}
+
 /* ================= 이름 → 구조 ================= */
 function normName(x){ return (x||"").toLowerCase().replace(/\s+/g,"").replace(/[‐-―]/g,"-"); }
 const NAME_DICT=(()=>{
@@ -5293,8 +5389,8 @@ function openDrawInput(mode){
   e.textContent=""; e.style.color="#c0392b";
   if(mode==="smiles"){
     t.textContent="SMILES그리기";
-    d.innerHTML="SMILES 문자열을 붙여넣고 <b>[그리기]</b>를 누르세요. (예: <b>CC(=O)O</b> 아세트산, <b>c1ccccc1</b> 벤젠, <b>CC(=O)Oc1ccccc1C(=O)O</b> 아스피린)";
-    f.placeholder="예: OCC(O)CO";
+    d.innerHTML="SMILES 문자열을 붙여넣고 <b>[그리기]</b>를 누르세요. <b>쉼표(,)로 여러 개</b>를 넣으면 순서대로 나열해 그립니다. (예: <b>CCO, c1ccccc1, CC(=O)O</b>)";
+    f.placeholder="예: CCO, c1ccccc1, CC(=O)O";
   }else{
     t.textContent="이름으로 그리기";
     const keyOk=document.getElementById("btnSettings").classList.contains("keyOk");
@@ -5312,6 +5408,15 @@ async function doDrawInput(){
   if(!val){ e.textContent="입력이 비어 있습니다."; return; }
   try{
     if(drawInMode==="smiles"){
+      const parts=val.split(/[,\n;]+/).map(s=>s.trim()).filter(Boolean);
+      if(parts.length>1){
+        const bad=[], graphs=[];
+        parts.forEach((s,i)=>{ try{ graphs.push(parseSMILES(s)); }catch(_){ bad.push("#"+(i+1)+" ("+s+")"); } });
+        if(bad.length){ e.textContent="SMILES 해석 실패: "+bad.join(", "); return; }
+        drawMultiFromGraphs(graphs);
+        document.getElementById("drawInOverlay").classList.remove("show");
+        showToast(parts.length+"개 SMILES 구조를 나열해 그렸습니다"); return;
+      }
       buildMoleculeFromGraph(parseSMILES(val));
       document.getElementById("drawInOverlay").classList.remove("show");
       showToast("SMILES 구조를 그렸습니다"); return;
@@ -8662,6 +8767,8 @@ window.addEventListener("keyup", e=>{ if(e.code==="Space") spaceDown=false; });
 const T_EN = {
   // 구조식 컬러 설정
   "컬러 설정":"Color","원소 기본색":"Element colors","사용자 색":"Custom color",
+  // 탄소 기호 우클릭 메뉴
+  "탄소 기호 표시":"Show C symbol","탄소 기호 숨김":"Hide C symbol","삭제":"Delete",
   // 상단 툴바
   "열기 (JSON)":"Open (JSON)","저장":"Save","저장 (JSON)":"Save (JSON)","MOL 내보내기":"Export MOL","PNG 내보내기":"Export PNG",
   "SMILES 복사":"Copy SMILES","SMILES그리기":"Draw from SMILES","↩ 취소":"↩ Undo","↪ 다시":"↪ Redo",
@@ -9652,7 +9759,7 @@ try{ if(BC_DEFAULT_LANG==="en") bcSetLang("en"); }catch(e){}
         if(lic.expiry) L.push("<b>"+(en?"Expires":"만료일")+":</b> "+ymd(new Date(lic.expiry)));
       } else { L.push("<b>"+(en?"License":"라이선스")+":</b> "+(en?"(not entered)":"(미입력)")); }
     }
-    L.push("<b>"+(en?"App version":"앱 버전")+":</b> V1.95");
+    L.push("<b>"+(en?"App version":"앱 버전")+":</b> V1.96");
     var html=L.join("<br>");
     if(isApp() && lic && lic.key){
       html += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #e6ebf1;">'
