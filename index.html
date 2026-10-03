@@ -429,6 +429,7 @@
   <button class="btn" id="btnSettings">AI설정</button>
   <button class="btn" id="btnHist">개발이력</button>
   <button class="btn" id="btnExt" style="font-weight:700">확장기능</button>
+  <button class="btn" id="btnUpdate" style="font-weight:700" title="최신 버전 확인 · 설치 파일 다운로드">업데이트</button>
   <input type="file" id="imgInput" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none">
   <input type="file" id="fileInput" accept=".json,application/json">
 </header>
@@ -688,7 +689,7 @@
     </div>
 
     <div id="credits">
-      V1.97 (2026.10)<br>
+      V1.98 (2026.10)<br>
       개발자: 정윤성<br>
       한국공학대학교<br>
       생명화학공학과
@@ -950,6 +951,9 @@
           최신 버전이 위에 있습니다 · BOUNDY Chem — 개발: 정윤성 (한국공학대학교 생명화학공학과)
         </div>
         <table class="hTable">
+          <tr><td>V1.98<br>(2026.10)</td><td>
+            · <b>[업데이트] 단추 신설</b> — [확장기능] 오른쪽 [업데이트]로 최신 버전을 확인하고 설치 파일을 받을 수 있습니다(이미 최신이면 "이미 최신 버전을 이용 중입니다." 안내). 국제판 33개 언어 지원<br>
+            · <b>3D 정전기 지도 추가 최적화</b> — 화면 표시는 가벼운 저해상도로, 선명한 최고 해상도는 <b>[3D 그림 내보내기]</b> 저장 때만 적용해 회전·전환 반응을 더 빠르게</td></tr>
           <tr><td>V1.97<br>(2026.10)</td><td>
             · <b>3D 정전기 지도 성능 개선</b> — 자동회전·드래그 중 정전기 지도를 <b>매 프레임이 아니라 일정 간격으로만</b> 다시 계산하고 처음부터 가벼운 해상도로 시작하도록 바꿔, 설치판(WebView2)에서 [자동회전]+[정전기 지도] 동시 사용 시 생기던 <b>멈춤·느린 반응</b> 문제를 해결</td></tr>
           <tr><td>V1.96<br>(2026.9)</td><td>
@@ -4941,12 +4945,53 @@ document.getElementById("restoreNo").onclick=()=>{
 };
 
 let toastTimer=null;
-function showToast(msg){
+function showToast(msg, ms){
   const t=document.getElementById("toast");
   t.textContent=msg; t.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>t.classList.remove("show"), 2600);
+  toastTimer=setTimeout(()=>t.classList.remove("show"), ms||2600);
 }
+
+/* ---------- [업데이트] : 최신 버전 확인 + 설치 파일 다운로드(기본 브라우저) ---------- */
+function _cmpVer(a,b){                 // "1.97" vs "1.98" → -1 / 0 / 1
+  const pa=String(a).split("."), pb=String(b).split(".");
+  for(let i=0;i<Math.max(pa.length,pb.length);i++){
+    const x=parseInt(pa[i]||"0",10)||0, y=parseInt(pb[i]||"0",10)||0;
+    if(x!==y) return x<y?-1:1;
+  }
+  return 0;
+}
+function _installerURL(){              // 에디션별 최신 설치 파일
+  const pro="https://github.com/boundy4/boundychem-pro/releases/latest/download/";
+  const tu="https://github.com/boundy4/boundychem-tu/releases/latest/download/";
+  if(BC_EDITION==="paid") return (BC_DEFAULT_LANG==="en") ? pro+"BOUNDYChem-Setup-INT.exe" : pro+"BOUNDYChem-Setup-KOR.exe";
+  return tu+"BOUNDYChem-Setup.exe";    // 무료(학교)판
+}
+function _openExternal(url){           // 설치판=기본 브라우저로 열기(opener), 웹=다운로드 트리거
+  const T=window.__TAURI__;
+  try{
+    if(T && T.opener && typeof T.opener.openUrl==="function"){ T.opener.openUrl(url); return; }
+    if(T && T.opener && typeof T.opener.open==="function"){ T.opener.open(url); return; }
+  }catch(e){}
+  const a=document.createElement("a"); a.href=url; a.download=""; a.target="_blank"; a.rel="noopener";
+  document.body.appendChild(a); a.click(); a.remove();
+}
+let _updBusy=false;
+async function checkUpdate(){
+  if(_updBusy) return; _updBusy=true;
+  const btn=document.getElementById("btnUpdate"); if(btn) btn.disabled=true;
+  let latest=null;
+  try{
+    const r=await fetch("https://boundy4.github.io/boundychem/version.json?t="+Date.now(), {cache:"no-store"});
+    if(r.ok){ const j=await r.json(); latest=(j&&j.version)?String(j.version):null; }
+  }catch(e){}
+  if(btn) btn.disabled=false; _updBusy=false;
+  if(!latest){ showToast(_bcMsg("업데이트 확인에 실패했습니다. 인터넷 연결을 확인하세요."), 5000); return; }
+  if(_cmpVer(latest, BC_VERSION)<=0){ showToast(_bcMsg("이미 최신 버전을 이용 중입니다."), 5000); return; }
+  _openExternal(_installerURL());
+  showToast(_bcMsg("최신 설치 파일을 다운로드합니다. 완료되면 실행해 설치하세요."), 6000);
+}
+document.getElementById("btnUpdate").onclick=checkUpdate;
 
 document.getElementById("btnSmiles").onclick=()=>{
   if(!atoms.length){ alert("변환할 구조가 없습니다."); return; }
@@ -7673,16 +7718,17 @@ function draw3DScene(ctx3, w, h){
     // (특히 설치판 WebView2에서 프레임마다 MEP 재계산 시 10~60초 멈춤·전체 UI 지연 발생 → 해결)
     const now=performance.now();
     const moving = v3.drag || v3.auto || (now-(v3._zoomT||0)<280);
+    // 화면 표시는 저해상도(가볍게), 선명한 최고 해상도는 [3D 그림 내보내기] 저장 때만(res 0.5).
     let res, key, gate;
     if(!moving){
-      res=1.5;                                   // 정지: 고해상도(한 번만)
+      res=2;                                     // 정지: 화면용 저해상도(빠름)
       key=v3.R.map(x=>x.toFixed(3)).join(",")+"|"+v3.zoom.toFixed(1)+"|"+w+"x"+h+"|s";
       gate=0;
     }else{
       const lastMs=v3._mepMs||999;               // 측정 전엔 크게 → 가장 가벼운 해상도로 시작(초기 멈춤 제거)
-      res = lastMs<=28 ? 5 : lastMs<=70 ? 7 : lastMs<=140 ? 9 : 12;   // 무거우면 단계적으로 coarse
+      res = lastMs<=28 ? 7 : lastMs<=70 ? 10 : lastMs<=140 ? 13 : 16;   // 회전 중: 더 coarse(가벼움)
       key=v3.R.map(x=>x.toFixed(2)).join(",")+"|"+v3.zoom.toFixed(1)+"|"+w+"x"+h+"|"+res;
-      gate=75;                                   // 재계산 최소 간격(ms) — 프레임마다 재계산 방지
+      gate=90;                                   // 재계산 최소 간격(ms) — 프레임마다 재계산 방지
     }
     if(!v3._mep || (v3._mep.key!==key && now-(v3._mepAt||0)>=gate)){
       const t0=performance.now();
@@ -8782,6 +8828,10 @@ const T_EN = {
   "컬러 설정":"Color","원소 기본색":"Element colors","사용자 색":"Custom color",
   // 탄소 기호 우클릭 메뉴
   "탄소 기호 표시":"Show C symbol","탄소 기호 숨김":"Hide C symbol","삭제":"Delete",
+  "업데이트":"Update",
+  "이미 최신 버전을 이용 중입니다.":"You're already using the latest version.",
+  "최신 설치 파일을 다운로드합니다. 완료되면 실행해 설치하세요.":"Downloading the latest installer. Run it to install when done.",
+  "업데이트 확인에 실패했습니다. 인터넷 연결을 확인하세요.":"Couldn't check for updates. Please check your internet connection.",
   // 상단 툴바
   "열기 (JSON)":"Open (JSON)","저장":"Save","저장 (JSON)":"Save (JSON)","MOL 내보내기":"Export MOL","PNG 내보내기":"Export PNG",
   "SMILES 복사":"Copy SMILES","SMILES그리기":"Draw from SMILES","↩ 취소":"↩ Undo","↪ 다시":"↪ Redo",
@@ -9710,6 +9760,7 @@ function bcSetLang(lang){
 /* ===== 언어 선택 팝업 + 빌드 플래그 ===== */
 var BC_DEFAULT_LANG = "ko";   // 빌드 플래그: KOR 빌드="ko" / INT 빌드="en"
 var BC_EDITION = "free";      // 빌드 플래그: 무료 학교판="free" / 유료 정식판="paid"
+var BC_VERSION = "1.98";      // 현재 앱 버전(업데이트 확인 기준). 올업 때 함께 올린다.
 var BC_LANGS_ALL = [
   {c:"ko",label:"한국어"},{c:"en",label:"English"},{c:"ja",label:"日本語"},{c:"fr",label:"Français"},
   {c:"ru",label:"Русский"},{c:"pt",label:"Português"},{c:"es",label:"Español"},{c:"de",label:"Deutsch"},
@@ -9772,7 +9823,7 @@ try{ if(BC_DEFAULT_LANG==="en") bcSetLang("en"); }catch(e){}
         if(lic.expiry) L.push("<b>"+(en?"Expires":"만료일")+":</b> "+ymd(new Date(lic.expiry)));
       } else { L.push("<b>"+(en?"License":"라이선스")+":</b> "+(en?"(not entered)":"(미입력)")); }
     }
-    L.push("<b>"+(en?"App version":"앱 버전")+":</b> V1.97");
+    L.push("<b>"+(en?"App version":"앱 버전")+":</b> V1.98");
     var html=L.join("<br>");
     if(isApp() && lic && lic.key){
       html += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #e6ebf1;">'
@@ -9945,6 +9996,7 @@ try{ if(BC_DEFAULT_LANG==="en") bcSetLang("en"); }catch(e){}
   function go(){
     LOCK.forEach(function(id){ lock(id, MSG); });
     SAVE_LOCK.forEach(function(id){ lock(id, SAVE_MSG); });
+    var upd=document.getElementById("btnUpdate"); if(upd) upd.style.display="none";   // 웹 체험판: 업데이트 버튼 숨김(설치본 아님)
     var banner=document.getElementById("trialBanner");
     if(banner) document.body.insertBefore(banner, document.body.firstChild);  // 최상단으로
   }
