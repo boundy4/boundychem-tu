@@ -688,7 +688,7 @@
     </div>
 
     <div id="credits">
-      V1.96 (2026.9)<br>
+      V1.97 (2026.10)<br>
       개발자: 정윤성<br>
       한국공학대학교<br>
       생명화학공학과
@@ -950,6 +950,8 @@
           최신 버전이 위에 있습니다 · BOUNDY Chem — 개발: 정윤성 (한국공학대학교 생명화학공학과)
         </div>
         <table class="hTable">
+          <tr><td>V1.97<br>(2026.10)</td><td>
+            · <b>3D 정전기 지도 성능 개선</b> — 자동회전·드래그 중 정전기 지도를 <b>매 프레임이 아니라 일정 간격으로만</b> 다시 계산하고 처음부터 가벼운 해상도로 시작하도록 바꿔, 설치판(WebView2)에서 [자동회전]+[정전기 지도] 동시 사용 시 생기던 <b>멈춤·느린 반응</b> 문제를 해결</td></tr>
           <tr><td>V1.96<br>(2026.9)</td><td>
             · <b>구조식 컬러 설정</b> — 구조를 선택하면 점선 사각형 아래 [컬러 설정] 단추로 원자·결합 전체 색을 원소 기본색·검정·원하는 단색으로 지정<br>
             · <b>탄소 기호 표시</b> — 골격식에서 생략된 탄소를 우클릭 메뉴(또는 더블클릭)로 C·CH·CH₂·CH₃ 명시 표기<br>
@@ -7666,21 +7668,32 @@ function draw3DScene(ctx3, w, h){
       drawMEPLegend(ctx3,w,h);
       return;
     }
-    const moving = v3.drag || v3.auto || (performance.now()-(v3._zoomT||0)<280);
-    // 회전 중 해상도 자동 조절: 계산이 빠르면(작은 분자) 고해상도 유지, 느리면 단계적으로 낮춤
-    const lastMs=v3._mepMs||0;   // res 3 기준 환산 시간
-    const res = !moving ? 1.5 : (lastMs<=34 ? 3 : lastMs<=75 ? 5 : 7);   // 정지 시 1.5px 고해상도
-    const key=v3.R.map(x=>x.toFixed(3)).join(",")+"|"+v3.zoom.toFixed(1)+"|"+w+"x"+h+"|"+res;
-    if(!v3._mep || v3._mep.key!==key){
+    // 성능: 자동회전/드래그 중에는 (1) 가벼운 해상도로 시작(초기 멈춤 방지)하고
+    // (2) 매 프레임이 아니라 최소 간격(쓰로틀)으로만 재계산해 메인 스레드 과부하를 막는다.
+    // (특히 설치판 WebView2에서 프레임마다 MEP 재계산 시 10~60초 멈춤·전체 UI 지연 발생 → 해결)
+    const now=performance.now();
+    const moving = v3.drag || v3.auto || (now-(v3._zoomT||0)<280);
+    let res, key, gate;
+    if(!moving){
+      res=1.5;                                   // 정지: 고해상도(한 번만)
+      key=v3.R.map(x=>x.toFixed(3)).join(",")+"|"+v3.zoom.toFixed(1)+"|"+w+"x"+h+"|s";
+      gate=0;
+    }else{
+      const lastMs=v3._mepMs||999;               // 측정 전엔 크게 → 가장 가벼운 해상도로 시작(초기 멈춤 제거)
+      res = lastMs<=28 ? 5 : lastMs<=70 ? 7 : lastMs<=140 ? 9 : 12;   // 무거우면 단계적으로 coarse
+      key=v3.R.map(x=>x.toFixed(2)).join(",")+"|"+v3.zoom.toFixed(1)+"|"+w+"x"+h+"|"+res;
+      gate=75;                                   // 재계산 최소 간격(ms) — 프레임마다 재계산 방지
+    }
+    if(!v3._mep || (v3._mep.key!==key && now-(v3._mepAt||0)>=gate)){
       const t0=performance.now();
       v3._mep={key, layer:computeMEPLayer(w,h,res)};
-      const ms=performance.now()-t0;
-      v3._mepMs = ms*(res*res)/9;
+      v3._mepAt=now;
+      if(moving) v3._mepMs = (performance.now()-t0)*(res*res)/9;   // 회전 중 측정만 추정에 반영
     }
     ctx3.save();
     ctx3.globalAlpha=0.66;
     ctx3.imageSmoothingEnabled=true;
-    ctx3.drawImage(v3._mep.layer, 0, 0, w, h);
+    if(v3._mep) ctx3.drawImage(v3._mep.layer, 0, 0, w, h);
     ctx3.restore();
     drawMEPLegend(ctx3,w,h);
   }
@@ -7701,7 +7714,7 @@ function loop3D(){
 
 function open3D(){
   v3.mol=build3D();
-  v3._mep=null;
+  v3._mep=null; v3._mepMs=0; v3._mepAt=0;   // 새 분자: MEP 해상도 추정 초기화(이전 분자값 오염 방지)
   v3.mep=document.getElementById("v3dMep").checked;
   v3.R=matMul(rotXm(-0.45), rotYm(0.35));
   document.getElementById("viewer3d").classList.add("show");
@@ -9759,7 +9772,7 @@ try{ if(BC_DEFAULT_LANG==="en") bcSetLang("en"); }catch(e){}
         if(lic.expiry) L.push("<b>"+(en?"Expires":"만료일")+":</b> "+ymd(new Date(lic.expiry)));
       } else { L.push("<b>"+(en?"License":"라이선스")+":</b> "+(en?"(not entered)":"(미입력)")); }
     }
-    L.push("<b>"+(en?"App version":"앱 버전")+":</b> V1.96");
+    L.push("<b>"+(en?"App version":"앱 버전")+":</b> V1.97");
     var html=L.join("<br>");
     if(isApp() && lic && lic.key){
       html += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #e6ebf1;">'
