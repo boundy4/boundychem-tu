@@ -689,7 +689,7 @@
     </div>
 
     <div id="credits">
-      V1.98 (2026.10)<br>
+      V1.99 (2026.10)<br>
       개발자: 정윤성<br>
       한국공학대학교<br>
       생명화학공학과
@@ -951,6 +951,8 @@
           최신 버전이 위에 있습니다 · BOUNDY Chem — 개발: 정윤성 (한국공학대학교 생명화학공학과)
         </div>
         <table class="hTable">
+          <tr><td>V1.99<br>(2026.10)</td><td>
+            · <b>3D 정전기 지도 전환 속도 개선</b> — 회전을 멈췄을 때 "흐릿→선명" 전환을 약 1초 안에 끝내도록 기기 성능에 맞춰 화면 해상도를 자동 조절(빠른 PC는 선명 유지). 최고 해상도는 <b>[3D 그림 내보내기]</b> 저장 때 그대로 적용</td></tr>
           <tr><td>V1.98<br>(2026.10)</td><td>
             · <b>[업데이트] 단추 신설</b> — [확장기능] 오른쪽 [업데이트]로 최신 버전을 확인하고 설치 파일을 받을 수 있습니다(이미 최신이면 "이미 최신 버전을 이용 중입니다." 안내). 국제판 33개 언어 지원<br>
             · <b>3D 정전기 지도 추가 최적화</b> — 화면 표시는 가벼운 저해상도로, 선명한 최고 해상도는 <b>[3D 그림 내보내기]</b> 저장 때만 적용해 회전·전환 반응을 더 빠르게</td></tr>
@@ -7721,8 +7723,13 @@ function draw3DScene(ctx3, w, h){
     // 화면 표시는 저해상도(가볍게), 선명한 최고 해상도는 [3D 그림 내보내기] 저장 때만(res 0.5).
     let res, key, gate;
     if(!moving){
-      res=2;                                     // 정지: 화면용 저해상도(빠름)
-      key=v3.R.map(x=>x.toFixed(3)).join(",")+"|"+v3.zoom.toFixed(1)+"|"+w+"x"+h+"|s";
+      // 정지: "희미→선명" 전환을 ~1초 안에 끝내도록, 회전 중 측정한 계산비용(_mepMs, res=3 기준)으로
+      // 기기 성능에 맞는 가장 선명한 해상도를 자동 선택. 빠른 PC는 선명 유지, 느린 PC는 1초에 맞춰 조절.
+      // (최고 선명은 [3D 그림 내보내기] 저장 때만 — res 0.5)
+      const est3=v3._mepMs||0, TARGET=1000;      // 목표 전환시간 ≈ 1초
+      res = est3>0 ? Math.max(1.5, Math.min(6, Math.sqrt(est3*9/TARGET))) : 2;
+      res = Math.round(res*2)/2;                 // 0.5 단위로 정리(캐시 key 안정)
+      key=v3.R.map(x=>x.toFixed(3)).join(",")+"|"+v3.zoom.toFixed(1)+"|"+w+"x"+h+"|s"+res;
       gate=0;
     }else{
       const lastMs=v3._mepMs||999;               // 측정 전엔 크게 → 가장 가벼운 해상도로 시작(초기 멈춤 제거)
@@ -9760,7 +9767,7 @@ function bcSetLang(lang){
 /* ===== 언어 선택 팝업 + 빌드 플래그 ===== */
 var BC_DEFAULT_LANG = "ko";   // 빌드 플래그: KOR 빌드="ko" / INT 빌드="en"
 var BC_EDITION = "free";      // 빌드 플래그: 무료 학교판="free" / 유료 정식판="paid"
-var BC_VERSION = "1.98";      // 현재 앱 버전(업데이트 확인 기준). 올업 때 함께 올린다.
+var BC_VERSION = "1.99";      // 현재 앱 버전(업데이트 확인 기준). 올업 때 함께 올린다.
 var BC_LANGS_ALL = [
   {c:"ko",label:"한국어"},{c:"en",label:"English"},{c:"ja",label:"日本語"},{c:"fr",label:"Français"},
   {c:"ru",label:"Русский"},{c:"pt",label:"Português"},{c:"es",label:"Español"},{c:"de",label:"Deutsch"},
@@ -9823,7 +9830,7 @@ try{ if(BC_DEFAULT_LANG==="en") bcSetLang("en"); }catch(e){}
         if(lic.expiry) L.push("<b>"+(en?"Expires":"만료일")+":</b> "+ymd(new Date(lic.expiry)));
       } else { L.push("<b>"+(en?"License":"라이선스")+":</b> "+(en?"(not entered)":"(미입력)")); }
     }
-    L.push("<b>"+(en?"App version":"앱 버전")+":</b> V1.98");
+    L.push("<b>"+(en?"App version":"앱 버전")+":</b> V1.99");
     var html=L.join("<br>");
     if(isApp() && lic && lic.key){
       html += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #e6ebf1;">'
